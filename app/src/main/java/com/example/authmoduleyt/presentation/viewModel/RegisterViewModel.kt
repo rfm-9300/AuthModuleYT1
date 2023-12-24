@@ -4,18 +4,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.authmoduleyt.domain.model.RegisterInputValidationType
 import com.example.authmoduleyt.domain.use_case.ValidateRegisterInputUseCase
 import com.example.authmoduleyt.presentation.state.RegisterState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.example.authmoduleyt.domain.repository.AuthRepository
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
-    private val validateRegisterInputUseCase: ValidateRegisterInputUseCase
+    private val validateRegisterInputUseCase: ValidateRegisterInputUseCase,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
 var registerState by mutableStateOf(RegisterState())
+
     private set
 
 fun onEmailInputChange(newValue: String){
@@ -42,7 +47,19 @@ fun onConfirmPasswordShowHideChange(){
     }
 
 fun onRegisterClick() {
-
+    registerState = registerState.copy(isLoading = true)
+    viewModelScope.launch {
+        val result = authRepository.login(
+            registerState.emailInput,
+            registerState.passwordInput
+        )
+        registerState = registerState.copy(isLoading = false)
+        registerState = if(result){
+            registerState.copy(isRegisterSuccess = true)
+        }else{
+            registerState.copy(errorMessageRegister = "An error occurred")
+        }
+    }
     }
 
 private fun checkInputValidation(){
